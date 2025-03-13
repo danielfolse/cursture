@@ -1,11 +1,15 @@
 import mediapipe as mp
 from mediapipe.python.solutions.hands import HandLandmark
 import pyautogui  # Import pyautogui for controlling the mouse
+import pygetwindow as gw  # Import pygetwindow for window manipulation
+import time
 
 class HandtoMouse:
     def __init__(self):
       self.prev_mouse_x = None
       self.prev_mouse_y = None
+      self.hand_flare_detected = False
+      self.last_click_time = 0  # Initialize the last click timestamp
 
     def moveMouse(self, detected_image):
       if detected_image.multi_hand_landmarks:
@@ -62,4 +66,35 @@ class HandtoMouse:
         self.clickMouse()
 
     def clickMouse(self):
-      pyautogui.click()
+      current_time = time.time()
+      if current_time - self.last_click_time >= 1:  # Check if 0.5 seconds have passed since the last click
+        pyautogui.click()
+        self.last_click_time = current_time  # Update the last click timestamp
+
+    def detectHandFlare(self, landmarks):
+      # Check if all fingers are extended
+      index_finger_tip = landmarks[HandLandmark.INDEX_FINGER_TIP]
+      middle_finger_tip = landmarks[HandLandmark.MIDDLE_FINGER_TIP]
+      ring_finger_tip = landmarks[HandLandmark.RING_FINGER_TIP]
+      pinky_tip = landmarks[HandLandmark.PINKY_TIP]
+
+      index_finger_base = landmarks[HandLandmark.INDEX_FINGER_MCP]
+      middle_finger_base = landmarks[HandLandmark.MIDDLE_FINGER_MCP]
+      ring_finger_base = landmarks[HandLandmark.RING_FINGER_MCP]
+      pinky_base = landmarks[HandLandmark.PINKY_MCP]
+
+      if (index_finger_tip.y < index_finger_base.y and
+        middle_finger_tip.y < middle_finger_base.y and
+        ring_finger_tip.y < ring_finger_base.y and
+        pinky_tip.y < pinky_base.y):
+        if not self.hand_flare_detected:
+          self.hand_flare_detected = True
+          self.makeWindowBigger()
+      else:
+        self.hand_flare_detected = False
+
+    def makeWindowBigger(self):
+      window = gw.getActiveWindow()
+      print("making window bigger")
+      if window:
+        window.resizeTo(window.width + 100, window.height + 100)
